@@ -1,0 +1,82 @@
+#   Version 6.0
+#
+# This is an example audit.conf.  Use this file to configure auditing and event hashing.
+#
+# There is NO DEFAULT audit.conf.
+#
+# To use one or more of these configurations, copy the configuration block into audit.conf 
+# in $SPLUNK_HOME/etc/system/local/.  You must restart Splunk to enable configurations.
+#
+# To learn more about configuration files (including precedence) please see the documentation 
+# located at http://docs.splunk.com/Documentation/Splunk/latest/Admin/Aboutconfigurationfiles
+
+
+
+[auditTrail]
+privateKey=/some/path/to/your/private/key/private_key.pem
+publicKey=/some/path/to/your/public/key/public_key.pem
+
+# If this stanza exists, audit trail events will be cryptographically signed.
+# You must have a private key to encrypt the signatures and a public key to decrypt them.
+# Generate your own keys using openssl in $SPLUNK_HOME/bin/.
+
+
+
+# EXAMPLE #1 - hash all events: 
+
+[eventHashing]
+
+# This performs a SHA256 hash on every event other than ones going the _audit index (which are 
+# handled their own way).
+# NOTE: All you need to enable hashing is the presence of the stanza 'eventHashing'.
+
+
+
+# EXAMPLE #2 - simple blacklisting
+
+[filterSpec:event_blacklist:myblacklist]
+host=somehost.splunk.com, 45.2.4.6, 45.3.5.4
+
+[eventHashing]
+filters=myblacklist
+
+# Splunk does NOT hash any events from the hosts listed - they are 'blacklisted'. All other
+# events are hashed.
+
+
+
+# EXAMPLE #3 - multiple blacklisting
+
+[filterSpec:event_blacklist:myblacklist]
+host=somehost.splunk.com, 46.45.32.1
+source=/some/source
+sourcetype=syslog, apache.error
+
+[eventHashing]
+filters=myblacklist
+
+# DO NOT hash all events with the following, sources, sourcetypes and hosts - they are all
+# blacklisted.  All other events are hashed.
+
+
+
+# EXAMPLE #4 - whitelisting
+
+[filterSpec:event_whitelist:mywhitelist]
+sourcetype=syslog
+#source=aa, bb  (these can be added as well)
+#host=xx, yy
+
+[filterSpec:event_blacklist:nothingelse]
+#The 'all' tag is a special boolean (defaults to false) that says match *all* events
+all=True
+
+[eventSigning]
+filters=mywhitelist, nothingelse
+
+# Hash ONLY those events which are of sourcetype 'syslog'.  All other events are NOT hashed.
+# Note that you can have a list of filters and they are executed from left to right for every event.
+# If an event passed a whitelist, the rest of the filters do not execute.  Thus placing
+# the whitelist filter before the 'all' blacklist filter says "only hash those events which
+# match the whitelist". 
+
